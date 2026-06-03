@@ -14,6 +14,7 @@ public class PlayerInput : MonoBehaviour
     private InputAction sprintAction;
 
     private Rigidbody rb;
+    private Animator animator;
     private bool isGrounded = false;
 
     void Awake()
@@ -23,6 +24,8 @@ public class PlayerInput : MonoBehaviour
         jumpAction  = map.FindAction("Jump");
         sprintAction = map.FindAction("Sprint");
         rb = GetComponent<Rigidbody>();
+
+        animator = GetComponent<Animator>();
     }
 
     void OnEnable()  { input.FindActionMap(mapName).Enable(); }
