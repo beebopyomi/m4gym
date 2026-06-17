@@ -1,2 +1,2 @@
 
-<img width="650" height="676" alt="obraz" src="hi.gif"/>
+<img width="1280" height="720" alt="obraz" src="hi.gif"/>
