@@ -1,69 +1,95 @@
+using System;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.TextCore.Text;
 
-public class PlayerInput : MonoBehaviour
+public class player : MonoBehaviour
 {
-    [SerializeField] private InputActionAsset input;
-    [SerializeField] private float walkSpeed = 5f;
-    [SerializeField] private float turnSpeed = 150f;
-    [SerializeField] private float jumpForce = 5f;
-    [SerializeField] private string mapName = "Player";
 
+    [SerializeField] private InputActionAsset input;
+    [SerializeField] private string actionMapName = "Player1";
+
+    private InputActionMap map;
     private InputAction moveAction;
     private InputAction jumpAction;
     private InputAction sprintAction;
-
-    private Rigidbody rb;
+    private CharacterController cc;
+    private float verticalVelocity = 0f;
+    public float gravity = -9.81f;
+    //private Rigidbody rb;
+    public float turnSpeed = 3f;
+    public float moveSpeed = 0.25f;
+    public float jumpHeight = 6.5f;
     private Animator animator;
-    private bool isGrounded = false;
 
     void Awake()
     {
-        InputActionMap map = input.FindActionMap(mapName);
-        moveAction  = map.FindAction("walk");
-        jumpAction  = map.FindAction("Jump");
+        map = input.FindActionMap(actionMapName);
+        moveAction = map.FindAction("Move");
+        jumpAction = map.FindAction("Jump");
         sprintAction = map.FindAction("Sprint");
-        rb = GetComponent<Rigidbody>();
-
-        animator = GetComponent<Animator>();
+    }
+    void Onable()
+    {
+        map.Enable();
     }
 
-    void OnEnable()  { input.FindActionMap(mapName).Enable(); }
-    void OnDisable() { input.FindActionMap(mapName).Disable(); }
+    void Osable()
+    {
+        map.Disable();
+    }
 
+
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    void Start()
+    {
+        cc = GetComponent<CharacterController>();
+    }
+
+    // Update is called once per frame
     void Update()
     {
+        
         Vector2 moveInput = moveAction.ReadValue<Vector2>();
 
-        float speed = walkSpeed * moveInput.y;
-
+        transform.rotation *= quaternion.Euler(0,moveInput.x*turnSpeed*Time.deltaTime,0);
+        float currentMoveSpeed = moveInput.y * moveSpeed;
         if (sprintAction.IsPressed())
-            speed *= 2f;
-
-        Vector3 movement = transform.forward * speed * Time.deltaTime;
-        transform.Translate(movement, Space.World);
-
-        float angle = moveInput.x * turnSpeed * Time.deltaTime;
-        transform.Rotate(0f, angle, 0f, Space.World);
-
-
-        if (jumpAction.WasPressedThisFrame() && isGrounded)
         {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            isGrounded = false;
+            currentMoveSpeed *= 2;
+        }
+        if (cc.isGrounded && verticalVelocity < 0f)
+        {
+            verticalVelocity = 0f;
         }
 
+        if (jumpAction.WasPressedThisFrame())
+        {
+            verticalVelocity = jumpHeight;
+        }
+
+        verticalVelocity += gravity * Time.deltaTime;
+
+        Vector3 move = transform.forward * currentMoveSpeed + Vector3.up * verticalVelocity;
+        cc.Move(move * Time.deltaTime);
+        if (cc.isGrounded)
+        {
+            verticalVelocity = -1f; // kleine downward force om grounded te blijven
+
+            if (jumpAction.WasPressedThisFrame())
+            {
+                verticalVelocity = Mathf.Sqrt(2f * Mathf.Abs(gravity) * jumpHeight); //hoeveel kracht moet je geven om op de juiste hoogte uit te komen?
+                animator.SetTrigger("JumpTrigger");
+            }
+        }
+        else
+        {
+            verticalVelocity += gravity * Time.deltaTime; // zwaartekracht trekt mij naar beneden
+        }
+        //animator.SetFloat("Speed", movementInput.y);
+        //animator.SetBool("Grounded", characterController.isGrounded);
+
     }
 
-    void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Ground"))
-            isGrounded = true;
-    }
-
-    void OnCollisionExit(Collision collision)
-    {
-        if (collision.gameObject.CompareTag("Ground"))
-            isGrounded = false;
-    }
 }
